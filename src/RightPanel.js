@@ -11,6 +11,7 @@ const RightPanelContainer = styled.div`
     right: 0;
     height: 100%;
     overflow-y: auto; /* Allow scrolling if content overflows */
+    border-left: 1px solid white; /* Add a thin white border on the left */
 `;
 
 const UpcomingMeeting = styled.div`

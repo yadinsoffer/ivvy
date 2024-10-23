@@ -6,13 +6,14 @@ import { faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons
 
 const SidebarContainer = styled.div`
     width: ${props => (props.isSidebarOpen ? '200px' : '0')}; /* Set width to 200px when open */
-    background-color: #181920;
+    background-color: ${props => (props.isSidebarOpen ? '#2A2B31' : '#181920')}; /* Change color based on state */
     padding: 20px;
     color: #FFFFFF;
     position: fixed;
     height: 100%;
     overflow: hidden; /* Hide overflow when collapsed */
-    transition: width 0.3s; /* Smooth transition for width change */
+    transition: width 0.3s, background-color 0.3s; /* Smooth transition for width and color change */
+    border-right: 1px solid ${props => (props.isSidebarOpen ? 'white' : '#181920')}; /* Change border color based on state */
 `;
 
 const NavItem = styled.div`

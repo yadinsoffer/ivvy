@@ -12,20 +12,13 @@ const Container = styled.div`
 `;
 
 const MainContent = styled.div`
-    width: 60%;
-    margin-left: 20%;
-    padding: 20px;
-    color: #FFFFFF;
-`;
-
-const Header = styled.header`
-    background-color: #1A1B21;
-    padding: 20px;
+    width: ${props => (props.isSidebarOpen ? '50%' : '60%')}; /* Adjust width based on sidebar state */
+    margin-left: ${props => (props.isSidebarOpen ? '20%' : '10%')}; /* Adjust margin based on sidebar state */
+    padding: 20px; /* Add padding */
     color: #FFFFFF;
 `;
 
 const Layout = () => {
-    const [isGroupsOpen, setIsGroupsOpen] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true); // State to control sidebar visibility
 
     // Function to toggle the sidebar
@@ -35,12 +28,10 @@ const Layout = () => {
 
     return (
         <Container>
-            <Sidebar isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} /> {/* Pass state and function */}
-            <MainContent>
-                <Header>
-                    <h2>Meetings</h2>
-                    <p style={{ color: '#8E8E93' }}>This Week</p>
-                </Header>
+            <Sidebar isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+            <MainContent isSidebarOpen={isSidebarOpen}>
+                <h2>Meetings</h2>
+                <p style={{ color: '#8E8E93' }}>This Week</p>
                 <Meetings /> {/* Use the Meetings component here */}
             </MainContent>
             <RightPanel /> {/* Add the RightPanel component here */}

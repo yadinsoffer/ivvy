@@ -3,30 +3,36 @@ import React from 'react';
 import styled from 'styled-components';
 
 const GettingStartedContainer = styled.div`
-    background: rgba(255, 255, 255, 0.1); /* Semi-transparent white */
-    border-radius: 10px; /* Rounded edges */
+    position: fixed; /* Position it fixed to the viewport */
+    bottom: 50px; /* Distance from the bottom of the viewport */
+    left: 20px; /* Distance from the left of the viewport */
+    width: 150px; /* Set a width slightly less than the sidebar */
+    background-color: #2A2B31; /* Background color */
+    color: #FFFFFF;
     padding: 20px;
-    margin-top: 20px; /* Space from the above content */
-    backdrop-filter: blur(10px); /* Glass effect */
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Shadow for depth */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Optional shadow for depth */
+    z-index: 100; /* Ensure it appears above other content */
+    transition: opacity 0.3s; /* Smooth transition for visibility */
 `;
 
-const NavItem = styled.div`
-    padding: 10px 0;
-    color: #9C27B0;
-    font-size: 14px;
+const Title = styled.h3`
+    margin: 0 0 10px 0; /* Margin for the title */
 `;
 
-const GettingStarted = () => {
+const GettingStartedItem = styled.p`
+    margin: 5px 0; /* Margin for each item */
+    color: #9C27B0; /* Different color for getting started items */
+`;
+
+const GettingStarted = ({ isVisible }) => {
     return (
-        <GettingStartedContainer>
-            <h3 style={{ color: '#9C27B0' }}>Getting Started</h3>
-            <NavItem style={{ textDecoration: 'line-through', color: '#8E8E93' }}>Complete onboarding</NavItem>
-            <NavItem>Capture your first meeting</NavItem>
-            <NavItem>Edit meeting notes</NavItem>
+        <GettingStartedContainer style={{ opacity: isVisible ? 1 : 0, pointerEvents: isVisible ? 'auto' : 'none' }}>
+            <Title>Getting Started</Title>
+            <GettingStartedItem>Complete onboarding</GettingStartedItem>
+            <GettingStartedItem>Capture your first meeting</GettingStartedItem>
+            <GettingStartedItem>Edit meeting notes</GettingStartedItem>
         </GettingStartedContainer>
     );
 };
 
 export default GettingStarted;
-
