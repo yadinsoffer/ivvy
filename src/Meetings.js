@@ -61,6 +61,7 @@ const Meetings = () => {
                 const response = await fetch('http://127.0.0.1:61372/api/meetings');
                 console.log('Response Status:', response.status); // Log the response status
                 const data = await response.json();
+                console.log('Fetched Meetings:', meetings); // Log the meetings data
                 console.log('Fetched Data:', data); // Log the fetched data
                 setMeetings(data);
             } catch (error) {
@@ -90,7 +91,11 @@ const Meetings = () => {
                         </MeetingInfo>
                         <MeetingTime>{new Date(meeting.date).toLocaleTimeString()}</MeetingTime>
                         <p><strong>Guests:</strong> {meeting.guests.join(', ')}</p> {/* Display the guests */}
-                        {meeting.link && <p><strong>Link:</strong> <a href={meeting.link} target="_blank" rel="noopener noreferrer">{meeting.link}</a></p>} {/* Display the meeting link */}
+                        {meeting.link ? (
+                            <p><strong>Link:</strong> <a href={meeting.link} target="_blank" rel="noopener noreferrer">{meeting.link}</a></p>
+                        ) : (
+                            <p><strong>Link:</strong> Not available</p>
+                        )}
                     </StyledMeetingCard>
                 ))
             )}

@@ -135,7 +135,17 @@ def parse_ics(ics_data):
         if component.name == "VEVENT":
             event_details['title'] = component.get('summary')  # Meeting title
             event_details['guests'] = [str(attendee) for attendee in component.get('attendee', [])]  # Guests
-            event_details['link'] = component.get('url')  # Meeting link (if available)
+            
+            # Check for the meeting link in the X-GOOGLE-CONFERENCE field
+            event_details['link'] = component.get('X-GOOGLE-CONFERENCE') or None
+            
+            # If the link is still None, you can also check the description for the Google Meet link
+            if not event_details['link']:
+                description = component.get('description', '')
+                match = re.search(r'https?://[^\s]+', description)
+                if match:
+                    event_details['link'] = match.group(0)  # Extract the first URL found in the description
+
             event_details['date'] = component.get('dtstart').dt.date().isoformat()  # Meeting date
             event_details['time'] = component.get('dtstart').dt.time().isoformat()  # Meeting time
 
