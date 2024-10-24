@@ -1,10 +1,12 @@
 // src/Meetings.js
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCalendarAlt, faClock } from '@fortawesome/free-solid-svg-icons';
+import { io } from 'socket.io-client'; // Import the Socket.IO client
+import MeetingCard from './MeetingCard'; // Import the MeetingCard component
 
-const MeetingCard = styled.div`
+const socket = io('http://localhost:61372');
+
+const StyledMeetingCard = styled.div`
     background-color: #2A2B31;
     border-radius: 8px;
     padding: 20px;
@@ -40,33 +42,61 @@ const MeetingTime = styled.p`
     text-align: center;
 `;
 
+const MeetingsContainer = styled.div`
+    padding: 20px; /* Add padding */
+`;
+
+const EmptyState = styled.div`
+    color: #8E8E93;
+    text-align: center;
+    margin-top: 20px;
+`;
+
 const Meetings = () => {
+    const [meetings, setMeetings] = useState([]); // State for meeting data
+    const [loading, setLoading] = useState(true); // State for loading status
+
+    useEffect(() => {
+        const fetchMeetings = async () => {
+            try {
+                const response = await fetch('http://127.0.0.1:61372/api/meetings');
+                console.log('Response Status:', response.status); // Log the response status
+                const data = await response.json();
+                console.log('Fetched Data:', data); // Log the fetched data
+                setMeetings(data);
+            } catch (error) {
+                console.error('Error fetching meetings:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchMeetings(); // Call the fetch function
+    }, []); // Empty dependency array means this runs once on mount
+
+    if (loading) {
+        return <div>Loading...</div>; // You can customize this loading state
+    }
+
     return (
-        <>
-            <MeetingCard>
-                <MeetingInfo>
-                    <FontAwesomeIcon icon={faCalendarAlt} color="#FFFFFF" style={{ marginRight: '10px' }} />
-                    <MeetingDate>October 22</MeetingDate>
-                </MeetingInfo>
-                <MeetingName>Interview with John</MeetingName>
-                <MeetingInfo>
-                    <FontAwesomeIcon icon={faClock} color="#8E8E93" style={{ marginRight: '10px' }} />
-                    <MeetingTime>12:00 PM - 1:00 PM</MeetingTime>
-                </MeetingInfo>
-            </MeetingCard>
-            <MeetingCard>
-                <MeetingInfo>
-                    <FontAwesomeIcon icon={faCalendarAlt} color="#FFFFFF" style={{ marginRight: '10px' }} />
-                    <MeetingDate>October 23</MeetingDate>
-                </MeetingInfo>
-                <MeetingName>Project Kickoff</MeetingName>
-                <MeetingInfo>
-                    <FontAwesomeIcon icon={faClock} color="#8E8E93" style={{ marginRight: '10px' }} />
-                    <MeetingTime>2:00 PM - 3:00 PM</MeetingTime>
-                </MeetingInfo>
-            </MeetingCard>
-            {/* Add more meeting cards as needed */}
-        </>
+        <MeetingsContainer>
+            {meetings.length === 0 ? (
+                <EmptyState>No meetings scheduled.</EmptyState>
+            ) : (
+                meetings.map((meeting, index) => (
+                    <StyledMeetingCard key={index}>
+                        <MeetingInfo>
+                            <MeetingDate>{new Date(meeting.date).toLocaleDateString()}</MeetingDate>
+                            <MeetingName>{meeting.title}</MeetingName>
+                        </MeetingInfo>
+                        <MeetingTime>{new Date(meeting.date).toLocaleTimeString()}</MeetingTime>
+                        <p><strong>Attendees:</strong> {meeting.attendees.join(', ')}</p>
+                        <p><strong>From:</strong> {meeting.from}</p> {/* Display the sender */}
+                        {meeting.link && <p><strong>Link:</strong> <a href={meeting.link} target="_blank" rel="noopener noreferrer">{meeting.link}</a></p>}
+                    </StyledMeetingCard>
+                ))
+            )}
+        </MeetingsContainer>
     );
 };
 
