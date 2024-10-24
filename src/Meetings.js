@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { io } from 'socket.io-client'; // Import the Socket.IO client
-import MeetingCard from './MeetingCard'; // Import the MeetingCard component
 
 const socket = io('http://localhost:61372');
 
@@ -90,9 +89,8 @@ const Meetings = () => {
                             <MeetingName>{meeting.title}</MeetingName>
                         </MeetingInfo>
                         <MeetingTime>{new Date(meeting.date).toLocaleTimeString()}</MeetingTime>
-                        <p><strong>Attendees:</strong> {meeting.attendees.join(', ')}</p>
-                        <p><strong>From:</strong> {meeting.from}</p> {/* Display the sender */}
-                        {meeting.link && <p><strong>Link:</strong> <a href={meeting.link} target="_blank" rel="noopener noreferrer">{meeting.link}</a></p>}
+                        <p><strong>Guests:</strong> {meeting.guests.join(', ')}</p> {/* Display the guests */}
+                        {meeting.link && <p><strong>Link:</strong> <a href={meeting.link} target="_blank" rel="noopener noreferrer">{meeting.link}</a></p>} {/* Display the meeting link */}
                     </StyledMeetingCard>
                 ))
             )}

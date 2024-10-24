@@ -9,9 +9,14 @@ from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from flask_socketio import SocketIO
 from flask_cors import CORS
+from icalendar import Calendar
+import logging
 
 # If modifying these SCOPES, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -40,72 +45,106 @@ def authenticate_gmail():
     return build('gmail', 'v1', credentials=creds)
 
 def extract_meeting_details(message):
-    """Extract meeting details from the email message."""
+    """Extract all relevant details from the email message."""
     details = {}
     payload = message['payload']
     headers = payload['headers']
 
-    # Extract subject (Title)
+    # Extract all headers
     for header in headers:
         if header['name'] == 'Subject':
             details['title'] = header['value']
+        elif header['name'] == 'Date':
+            details['date'] = header['value']
+        elif header['name'] == 'From':
+            details['from'] = header['value']
+        elif header['name'] == 'To':
+            details['to'] = header['value']
+        elif header['name'] == 'Cc':
+            details['cc'] = header['value']
 
-    # Extract date from headers
-    for header in headers:
-        if header['name'] == 'Date':
-            details['date'] = header['value']  # This will be in RFC 2822 format
-
-    # Extract sender (From)
-    for header in headers:
-        if header['name'] == 'From':
-            details['from'] = header['value']  # Capture the sender's email
-
-    # Extract attendees
-    attendees = []
-    if 'To' in headers:
-        attendees.extend(headers['To'].split(','))
-    if 'Cc' in headers:
-        attendees.extend(headers['Cc'].split(','))
-    details['attendees'] = [attendee.strip() for attendee in attendees]
-
-    # Extract meeting link and time from the body
+    # Extract the body of the email
     if 'body' in payload and 'data' in payload['body']:
         body = base64.urlsafe_b64decode(payload['body']['data']).decode('utf-8')
+        details['body'] = body  # Store the entire body for inspection
 
-        # Extract meeting link (if exists)
-        meeting_link = re.search(r'(https?://[^\s]+)', body)
-        if meeting_link:
-            details['link'] = meeting_link.group(0)
+        # Extract meeting link
+        meeting_link_match = re.search(r'Meeting link\s*(https?://[^\s]+)', body)
+        if meeting_link_match:
+            details['link'] = meeting_link_match.group(1)
 
-        # Extract time (if exists)
-        time_match = re.search(r'(\d{1,2}:\d{2} ?[APMapm]{2})', body)
-        if time_match:
-            details['time'] = time_match.group(0)
+        # Extract date and time
+        date_time_match = re.search(r'When\s*:\s*(.*)', body, re.IGNORECASE)
+        if date_time_match:
+            details['date_time'] = date_time_match.group(1).strip()
+
+        # Extract guests
+        guests_match = re.search(r'Guests?\s*:\s*(.*)', body, re.IGNORECASE)
+        if guests_match:
+            details['guests'] = [guest.strip() for guest in guests_match.group(1).split(',') if guest.strip()]
+
+        # Extract attendees from the body if they are explicitly mentioned
+        attendees_match = re.search(r'Attendees?\s*:\s*(.*)', body, re.IGNORECASE)
+        if attendees_match:
+            details['attendees'] = [attendee.strip() for attendee in attendees_match.group(1).split(',') if attendee.strip()]
+        else:
+            # Fallback to headers if not found in body
+            details['attendees'] = [attendee.strip() for attendee in details.get('to', '').split(',') if attendee.strip()]
 
     return details
 
 @app.route('/api/meetings', methods=['GET'])
 def get_meetings():
-    """Fetch and return meeting details."""
+    logging.info("get_meetings function called")  # Log when the function is called
+    """Fetch and return meeting details from calendar invites."""
     service = authenticate_gmail()
     
-    # Query for calendar invitations
-    query = 'subject:"Invitation" OR from:calendar@google.com'
+    # Query for emails with .ics attachments
+    query = 'has:attachment filename:ics'
     results = service.users().messages().list(userId='me', q=query).execute()
     messages = results.get('messages', [])
+    
+    logging.info(f"Found {len(messages)} messages with .ics attachments.")
 
     meeting_details = []
     for message in messages:
         msg = service.users().messages().get(userId='me', id=message['id']).execute()
-        details = extract_meeting_details(msg)
-        if details:  # Only append if details are found
-            meeting_details.append(details)
+        if 'parts' in msg['payload']:
+            for part in msg['payload']['parts']:
+                if part['filename'].endswith('.ics'):
+                    logging.info(f"Found .ics attachment: {part['filename']}")
+                    ics_data = download_attachment(service, message['id'], part['body']['attachmentId'])
+                    logging.info(f"Downloaded .ics data: {ics_data}")  # Log the raw .ics data
+                    event_details = parse_ics(ics_data)  # Parse the .ics data
+                    logging.info(f"Parsed event details: {event_details}")  # Log the parsed event details
+                    meeting_details.append(event_details)
 
     return jsonify(meeting_details)
 
-print("Starting email monitor...")
-authenticate_gmail()  # Call the function here
-print("Gmail authentication complete.")
+def download_attachment(service, message_id, attachment_id):
+    """Download the attachment from the email."""
+    attachment = service.users().messages().attachments().get(userId='me', messageId=message_id, id=attachment_id).execute()
+    return base64.urlsafe_b64decode(attachment['data']).decode('utf-8')  # Decode the base64 data
+
+def parse_ics(ics_data):
+    """Parse the .ics data and extract relevant event details."""
+    calendar = Calendar.from_ical(ics_data)
+    event_details = {}
+
+    for component in calendar.walk():
+        if component.name == "VEVENT":
+            event_details['title'] = component.get('summary')  # Meeting title
+            event_details['guests'] = [str(attendee) for attendee in component.get('attendee', [])]  # Guests
+            event_details['link'] = component.get('url')  # Meeting link (if available)
+            event_details['date'] = component.get('dtstart').dt.date().isoformat()  # Meeting date
+            event_details['time'] = component.get('dtstart').dt.time().isoformat()  # Meeting time
+
+    return event_details
 
 if __name__ == '__main__':
+    # Call the get_meetings function directly for testing
+    with app.app_context():  # Create an application context
+        meetings = get_meetings()  # Call the function
+        print(meetings.get_json())  # Print the JSON response
+
     socketio.run(app, port=61372)

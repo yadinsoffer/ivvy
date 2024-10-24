@@ -10,9 +10,16 @@ const Card = styled.div`
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 `;
 
-const MeetingCard = ({ children }) => {
-    return <Card>{children}</Card>;
+const MeetingCard = ({ meeting }) => {
+    return (
+        <Card>
+            <h3>{meeting.title}</h3>
+            <p><strong>Guests:</strong> {meeting.guests.join(', ')}</p>
+            <p><strong>Meeting Link:</strong> <a href={meeting.link} target="_blank" rel="noopener noreferrer">{meeting.link}</a></p>
+            <p><strong>Date:</strong> {meeting.date}</p>
+            <p><strong>Time:</strong> {meeting.time}</p>
+        </Card>
+    );
 };
 
 export default MeetingCard;
-
